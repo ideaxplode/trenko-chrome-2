@@ -1,0 +1,23 @@
+{
+    "manifest_version": 3,
+    "name": "TrenkoChrome",
+    "version": "3.0",
+    "description": "Trenko's Chrome extension that integrates to Trello.",
+    "icons": {
+      "16": "icons/icon16.png",
+      "64": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "permissions": [
+      "activeTab",
+      "scripting"
+    ],
+    "content_scripts": [
+      {
+        "matches": ["https://trello.com/*"],
+        "js": ["content.js"],
+        "css": ["styles.css"]
+      }
+    ]
+  }
+  
