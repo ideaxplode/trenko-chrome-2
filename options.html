@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>TrenkoChrome Options</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        label {
+            display: block;
+            margin-top: 25px;
+        }
+
+        input {
+            width: 80%;
+            margin-top: 5px;
+            padding: 8px;
+        }
+
+        button {
+            margin-top: 30px;
+            padding: 10px 25px;
+        }
+
+        .tip-text {
+            margin-top: 5px;
+            color:#5676e1;
+        }
+        .saved-status {
+            color:green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>TrenkoChrome Options</h1>
+    <label for="trenkoHostUrl">Trenko's web URL:</label>
+    <input type="text" id="trenkoHostUrl" placeholder="e.g. https://trenko.yourcompany.com">
+
+    <label for="trenkoApiKey">Your Trenko API Key:</label>
+    <input type="text" id="trenkoApiKey" placeholder="">
+    <div class="tip-text">You can find this in your My Profile page in Trenko.</div>
+
+    <button id="save">Save</button>
+    <p class="saved-status" id="status"></p>
+
+    <script src="options.js"></script>
+</body>
+
+</html>
