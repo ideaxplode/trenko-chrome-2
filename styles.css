@@ -1,0 +1,36 @@
+.trenko-buttons-container {}
+
+@keyframes blink {
+    50% {
+        background-color: orange;
+    }
+}
+
+.check-in-button {
+    display: block !important;
+    animation: blink 1s steps(1, end) infinite;
+}
+
+.add-to-agenda-button {
+    display: block !important;
+}
+
+.post-agenda-button {
+    display: block !important;
+}
+
+.clock-effort-button {
+    display: block !important;
+}
+
+.add-break-button {
+    display: block !important;
+}
+
+.check-out-button {
+    display: block !important;
+}
+
+.card-report-button {
+    display: block !important;
+}
