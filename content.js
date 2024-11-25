@@ -3,7 +3,7 @@
 var trenkoHostUrl = null;
 var trenkoApiKey = null;
 var currentTrenkoSessionStatus = 'checked_out'; // default status is 'checked_out'
-const trenkoButtonElements = ['checkInElement', 'addToAgendaElement', 'postAgendaElement', 'clockEffortElement', 'addBreakElement', 'checkOutElement', 'cardReportElement'];
+const trenkoButtonElementIds = ['checkInElement', 'addToAgendaElement', 'postAgendaElement', 'clockEffortElement', 'addBreakElement', 'checkOutElement', 'cardReportElement'];
 
 // Set up message listener from TrenkoWeb
 window.addEventListener('message', receiveMessageFromTrenkoWeb, false);
@@ -197,7 +197,7 @@ function insertCustomElements(buttonsContainer, customElementsTree) {
 }
 
 function addEventListenersToButtons() {
-    trenkoButtonElements.forEach(function (buttonId) {
+    trenkoButtonElementIds.forEach(function (buttonId) {
         document.getElementById(buttonId).addEventListener('click', handleTrenkoButtonClick);
     });
 }
@@ -222,7 +222,7 @@ function showHideButtonsBasedOnStatus() {
     }
 
     // Iterate and set visibility for each button
-    trenkoButtonElements.forEach(function (buttonId) {
+    trenkoButtonElementIds.forEach(function (buttonId) {
         const buttonElement = document.getElementById(buttonId);
         if (buttonElement) {
             if (visibleButtonIds.includes(buttonId)) {
@@ -287,20 +287,33 @@ function getCurrentTrelloCardId() {
 }
 
 function openTrenkoWindow(url) {
-    const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
-    const newWindow = window.open(url, '_blank', windowFeatures);
+    // Get the current window's position and size
+    const wLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX;
+    const wTop = window.screenTop !== undefined ? window.screenTop : window.screenY;
+    const wOuterWidth = window.outerWidth || document.documentElement.clientWidth;
+    const wOuterHeight = window.outerHeight || document.documentElement.clientHeight;
+
+    // Calculate the new window's dimensions
+    const width = wOuterWidth / 1.5;
+    const height = wOuterHeight / 2;
+
+    // Calculate the position to center the new window
+    const left = wLeft + (wOuterWidth - width) / 2;
+    const top = wTop + (wOuterHeight - height) / 2;
+
+    // Assemble the window features string
+    const windowFeatures = `width=${width},height=${height},top=${top},left=${left},location=no,resizable=no,status=no,toolbar=no,scrollbars=no`;
+
+    // Open the new window
+    const newWindow = window.open(url, '', windowFeatures);
 
     if (!newWindow) {
         alert('TrenkoChrome: Unable to open TrenkoWeb window. Please allow pop-ups for this site!');
         return;
     }
 
-    // const checkWindowClosed = setInterval(() => {
-    //     if (newWindow.closed) {
-    //         clearInterval(checkWindowClosed);
-    //         if (callback) callback();
-    //     }
-    // }, 500);
+    // Optional: Focus the new window
+    newWindow.focus();
 }
 
 // Function to listen to messages from TrenkoWeb (for updating session status)
