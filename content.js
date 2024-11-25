@@ -2,11 +2,11 @@
 
 var trenkoHostUrl = null;
 var trenkoApiKey = null;
+var currentTrenkoSessionStatus = 'checked_out'; // default status is 'checked_out'
+const trenkoButtonElements = ['checkInElement', 'addToAgendaElement', 'postAgendaElement', 'clockEffortElement', 'addBreakElement', 'checkOutElement', 'cardReportElement'];
 
 // Set up message listener from TrenkoWeb
 window.addEventListener('message', receiveMessageFromTrenkoWeb, false);
-
-var currentTrenkoSessionStatus = null;
 
 // ----------------------- Add custom Trenko elements/button -------------------
 
@@ -38,26 +38,18 @@ function loadTrenkoWebInfo() {
             alert('TrenkoChrome: Please set Trenko\'s Web URL and your Trenko API Key in the extension options. This extension will not work without this! Please reload the Trello page after doing this.');
             return null;
         } else {
-            console.log('TrenkoChrome: TrenkoWeb info loaded from options.')
+            console.log('TrenkoChrome: TrenkoWeb\'s info loaded from extension options.')
         }
     });
 }
 
 function loadTrenkoSessionStatus() {
-    if (currentTrenkoSessionStatus) {
-        return; // Do nothing if session status is already loaded
-    }
-
     // Load session status from Chrome storage
     chrome.storage.sync.get(['trenkoSessionStatus'], function (items) {
         if (items.trenkoSessionStatus) {
             currentTrenkoSessionStatus = items.trenkoSessionStatus;
-        } else {
-            currentTrenkoSessionStatus = 'checked_out'; // Default to 'checked_out' if not set
+            console.log(`TrenkoChrome: Session status loaded from Chrome storage as: ${currentTrenkoSessionStatus}`)
         }
-
-        // After loading, update the button visibility
-        showHideButtonsBasedOnStatus();
     });
 }
 
@@ -111,10 +103,9 @@ function addCustomButtonsToCard() {
             var customElementsTree = buildCustomElementsTree(buttonsContainer);
             insertCustomElements(buttonsContainer, customElementsTree);
             addEventListenersToButtons();
+            showHideButtonsBasedOnStatus();
         }
-    }, 500);
-
-    showHideButtonsBasedOnStatus(); // Update button visibility after adding the buttons
+    }, 2000);
 }
 
 function getButtonsContainer() {
@@ -122,7 +113,7 @@ function getButtonsContainer() {
     const button = document.querySelector('button[data-testid="card-back-labels-button"]');
 
     if (!button) {
-        console.warn('Button with data-testid not found.');
+        console.warn('TrenkoChrome: Button with data-testid not found.');
         return null;
     }
 
@@ -152,45 +143,45 @@ function buildCustomElementsTree(buttonsContainer) {
                 <h4 class="${h4Class}">Trenko Actions</h4>
             </hgroup>
             <ul class="${ulClass}">
-                <li class="${liClass}">
-                    <button id="checkInButton" class="${buttonClass} check-in-button" type="button" style="display: none;">
-                        Check-In
+                <li id="checkInElement" class="${liClass}" style="display: none;">
+                    <button class="${buttonClass} check-in-button" type="button">
+                        ✅&nbsp; Check-In
                     </button>
                 </li>
-                <li class="${liClass}">
-                    <button id="addToAgendaButton" class="${buttonClass} add-to-agenda-button" type="button" style="display: none;">
-                        Add to Agenda
+                <li id="addToAgendaElement" class="${liClass}" style="display: none;">
+                    <button class="${buttonClass} add-to-agenda-button" type="button">
+                        ➕&nbsp; ⨭&nbsp; Add to Agenda
                     </button>
                 </li>
-                <li class="${liClass}">
-                    <button id="postAgendaButton" class="${buttonClass} post-agenda-button" type="button" style="display: none;">
-                        Post Agenda
+                <li id="postAgendaElement" class="${liClass}" style="display: none;">
+                    <button class="${buttonClass} post-agenda-button" type="button">
+                        📣&nbsp; Post Agenda
                     </button>
                 </li>
-                <li class="${liClass}">
-                    <button id="clockEffortButton" class="${buttonClass} clock-effort-button" type="button" style="display: none;">
-                        Clock Effort
+                <li id="clockEffortElement" class="${liClass}" style="display: none;">
+                    <button class="${buttonClass} clock-effort-button" type="button">
+                        ⛳&nbsp; Clock Effort
                     </button>
                 </li>
-                <li class="${liClass}">
-                    <button id="addBreakButton" class="${buttonClass} add-break-button" type="button" style="display: none;">
-                        Add Break
+                <li id="addBreakElement" class="${liClass}" style="display: none;">
+                    <button class="${buttonClass} add-break-button" type="button">
+                        ☕&nbsp; Add Break
                     </button>
                 </li>
-                <li class="${liClass}">
-                    <button id="checkOutButton" class="${buttonClass} check-out-button" type="button" style="display: none;">
-                        Check-Out
+                <li id="checkOutElement" class="${liClass}" style="display: none;">
+                    <button class="${buttonClass} check-out-button" type="button">
+                        🚪&nbsp; Check-Out
                     </button>
                 </li>
                 <hr>
-                <li class="${liClass}">
-                    <button id="cardReportButton" class="${buttonClass} card-report-button" type="button" style="display: none;">
-                        Card Report
+                <li id="cardReportElement" class="${liClass}" style="display: none;">
+                    <button class="${buttonClass} card-report-button" type="button">
+                        📰&nbsp; Effort Report
                     </button>
                 </li>
             </ul>
         </div>
-        </br>
+        <div style="height: 25px;"></div>
         <hgroup class="${hgroupClass}">
             <h4 class="${h4Class}">Trello Actions</h4>
         </hgroup>
@@ -206,10 +197,40 @@ function insertCustomElements(buttonsContainer, customElementsTree) {
 }
 
 function addEventListenersToButtons() {
-    const buttonsList = ["checkInButton", "addToAgendaButton", "postAgendaButton", "clockEffortButton", "addBreakButton", "checkOutButton", "cardReportButton"];
-
-    buttonsList.forEach(function (buttonId) {
+    trenkoButtonElements.forEach(function (buttonId) {
         document.getElementById(buttonId).addEventListener('click', handleTrenkoButtonClick);
+    });
+}
+
+function showHideButtonsBasedOnStatus() {
+    let visibleButtonIds = [];
+
+    switch (currentTrenkoSessionStatus) {
+        case 'checked_out':
+            visibleButtonIds = ['checkInElement', 'cardReportElement'];
+            break;
+        case 'checked_in':
+            visibleButtonIds = ['addToAgendaElement', 'postAgendaElement', 'cardReportElement'];
+            break;
+        case 'agenda_posted':
+            visibleButtonIds = ['clockEffortElement', 'addBreakElement', 'checkOutElement', 'cardReportElement'];
+            break;
+        default:
+            // Handle any unexpected status by showing only the Card Report button
+            visibleButtonIds = ['cardReportElement'];
+            break;
+    }
+
+    // Iterate and set visibility for each button
+    trenkoButtonElements.forEach(function (buttonId) {
+        const buttonElement = document.getElementById(buttonId);
+        if (buttonElement) {
+            if (visibleButtonIds.includes(buttonId)) {
+                buttonElement.style.display = 'block';
+            } else {
+                buttonElement.style.display = 'none';
+            }
+        }
     });
 }
 
@@ -228,28 +249,28 @@ function handleTrenkoButtonClick() {
     var cardId = null;
 
     switch (this.id) {
-        case 'checkInButton':
+        case 'checkInElement':
             cardId = getCurrentTrelloCardId();
             url = `${trenkoHostUrl}/user/work_day/new?card_id=${cardId}&token=${trenkoApiKey}`;
             break;
-        case 'addToAgendaButton':
+        case 'addToAgendaElement':
             cardId = getCurrentTrelloCardId();
             url = `${trenkoHostUrl}/user/agendas/new?card_id=${cardId}&token=${trenkoApiKey}`;
             break;
-        case 'postAgendaButton':
+        case 'postAgendaElement':
             url = `${trenkoHostUrl}/user/agendas?token=${trenkoApiKey}`;
             break;
-        case 'clockEffortButton':
+        case 'clockEffortElement':
             cardId = getCurrentTrelloCardId();
             url = `${trenkoHostUrl}/user/effort_entries/new?card_id=${cardId}&token=${trenkoApiKey}`;
             break;
-        case 'addBreakButton':
+        case 'addBreakElement':
             url = `${trenkoHostUrl}/user/break_entries/new?token=${trenkoApiKey}`;
             break;
-        case 'checkOutButton':
+        case 'checkOutElement':
             url = `${trenkoHostUrl}/user/work_day?token=${trenkoApiKey}`;
             break;
-        case 'cardReportButton':
+        case 'cardReportElement':
             cardId = getCurrentTrelloCardId();
             url = `${trenkoHostUrl}/reports/card_efforts?card_id=${cardId}&token=${trenkoApiKey}`;
             break;
@@ -291,10 +312,14 @@ function receiveMessageFromTrenkoWeb(event) {
         return;
     }
 
-    if (event.data && event.data.type) {
+    if (event.data && event.data.type === 'session' && event.data.values && event.data.values.status) {
         console.log('TrenkoChrome: Received message from TrenkoWeb:', event.data);
 
-        setTrenkoSessionStatus(event.data.type.trim());
+        // Extract the session status from the message
+        const statusString = event.data.values.status.trim();
+        setTrenkoSessionStatus(statusString);
+    } else {
+        console.warn('TrenkoChrome: Received message with unexpected format:', event.data);
     }
 }
 
@@ -305,54 +330,11 @@ function setTrenkoSessionStatus(statusString) {
 
     currentTrenkoSessionStatus = statusString;
 
+    showHideButtonsBasedOnStatus(); // Update the button visibility based on the new status
+
     // Persist session status in Chrome storage
     chrome.storage.sync.set({ 'trenkoSessionStatus': currentTrenkoSessionStatus }, function () {
-        console.log('TrenkoChrome: Session status saved as', currentTrenkoSessionStatus);
-    });
-
-    // Update the button visibility based on the new status
-    showHideButtonsBasedOnStatus();
-}
-
-function showHideButtonsBasedOnStatus() {
-    const allButtonIds = [
-        'checkInButton',
-        'addToAgendaButton',
-        'postAgendaButton',
-        'clockEffortButton',
-        'addBreakButton',
-        'checkOutButton',
-        'cardReportButton'
-    ];
-
-    let visibleButtonIds = [];
-
-    switch (currentTrenkoSessionStatus) {
-        case 'checked_out':
-            visibleButtonIds = ['checkInButton', 'cardReportButton'];
-            break;
-        case 'checked_in':
-            visibleButtonIds = ['addToAgendaButton', 'postAgendaButton', 'cardReportButton'];
-            break;
-        case 'agenda_posted':
-            visibleButtonIds = ['clockEffortButton', 'addBreakButton', 'checkOutButton', 'cardReportButton'];
-            break;
-        default:
-            // Handle any unexpected status by showing only the Card Report button
-            visibleButtonIds = ['cardReportButton'];
-            break;
-    }
-
-    // Iterate and set visibility for each button
-    allButtonIds.forEach(function(buttonId) {
-        const buttonElement = document.getElementById(buttonId);
-        if (buttonElement) {
-            if (visibleButtonIds.includes(buttonId)) {
-                buttonElement.style.display = 'block';
-            } else {
-                buttonElement.style.display = 'none';
-            }
-        }
+        console.log(`TrenkoChrome: Session status saved as: ${currentTrenkoSessionStatus}`);
     });
 }
 

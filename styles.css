@@ -1,4 +1,5 @@
-.trenko-buttons-container {}
+.trenko-buttons-container {
+}
 
 @keyframes blink {
     50% {
@@ -14,15 +15,18 @@
 }
 
 .post-agenda-button {
+    background-color: orange !important;
 }
 
 .clock-effort-button {
 }
 
 .add-break-button {
+    
 }
 
 .check-out-button {
+    background-color: #ff7e7e !important;
 }
 
 .card-report-button {
