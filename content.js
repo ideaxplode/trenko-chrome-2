@@ -1,14 +1,20 @@
 // content.js
 
-// ----------------------- Add custom Trenko elements/button -------------------
-
 var trenkoHostUrl = null;
 var trenkoApiKey = null;
+
+// Set up message listener from TrenkoWeb
+window.addEventListener('message', receiveMessageFromTrenkoWeb, false);
+
+var currentTrenkoSessionStatus = null;
+
+// ----------------------- Add custom Trenko elements/button -------------------
 
 initializeTrenkoChrome();
 
 function initializeTrenkoChrome() {
     loadTrenkoWebInfo(); // this is an async call
+    loadTrenkoSessionStatus();  // this also is an async call
 
     // Initial check
     if (isCardView(window.location.href)) {
@@ -34,6 +40,24 @@ function loadTrenkoWebInfo() {
         } else {
             console.log('TrenkoChrome: TrenkoWeb info loaded from options.')
         }
+    });
+}
+
+function loadTrenkoSessionStatus() {
+    if (currentTrenkoSessionStatus) {
+        return; // Do nothing if session status is already loaded
+    }
+
+    // Load session status from Chrome storage
+    chrome.storage.sync.get(['trenkoSessionStatus'], function (items) {
+        if (items.trenkoSessionStatus) {
+            currentTrenkoSessionStatus = items.trenkoSessionStatus;
+        } else {
+            currentTrenkoSessionStatus = 'checked_out'; // Default to 'checked_out' if not set
+        }
+
+        // After loading, update the button visibility
+        showHideButtonsBasedOnStatus();
     });
 }
 
@@ -88,7 +112,9 @@ function addCustomButtonsToCard() {
             insertCustomElements(buttonsContainer, customElementsTree);
             addEventListenersToButtons();
         }
-    }, 2000);
+    }, 500);
+
+    showHideButtonsBasedOnStatus(); // Update button visibility after adding the buttons
 }
 
 function getButtonsContainer() {
@@ -200,7 +226,7 @@ function handleTrenkoButtonClick() {
 
     var url = null;
     var cardId = null;
-    
+
     switch (this.id) {
         case 'checkInButton':
             cardId = getCurrentTrelloCardId();
@@ -231,7 +257,7 @@ function handleTrenkoButtonClick() {
             console.log('TrenkoChrome: Unknown button clicked;');
     }
 
-    openTrenkoWindow(url, trenkoWindowClosedCallback);
+    openTrenkoWindow(url);
 }
 
 function getCurrentTrelloCardId() {
@@ -239,25 +265,99 @@ function getCurrentTrelloCardId() {
     return urlParts[2];
 }
 
-function openTrenkoWindow(url, callback) {
-    const windowFeatures = 'width=800,height=400,menubar=no,toolbar=no,location=no,status=no';
+function openTrenkoWindow(url) {
+    const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
     const newWindow = window.open(url, '_blank', windowFeatures);
 
-    const checkWindowClosed = setInterval(() => {
-        if (newWindow.closed) {
-            clearInterval(checkWindowClosed);
-            if (callback) callback();
-        }
-    }, 500);
+    if (!newWindow) {
+        alert('TrenkoChrome: Unable to open TrenkoWeb window. Please allow pop-ups for this site!');
+        return;
+    }
+
+    // const checkWindowClosed = setInterval(() => {
+    //     if (newWindow.closed) {
+    //         clearInterval(checkWindowClosed);
+    //         if (callback) callback();
+    //     }
+    // }, 500);
 }
 
-function trenkoWindowClosedCallback(trenko_session_status) {
-    console.log(trenko_session_status);
+// Function to listen to messages from TrenkoWeb (for updating session status)
+function receiveMessageFromTrenkoWeb(event) {
+    const trustedOrigin = new URL(trenkoHostUrl).origin;
+
+    if (event.origin !== trustedOrigin) {
+        // console.warn('TrenkoChrome: Ignoring message from untrusted origin:', event.origin);
+        return;
+    }
+
+    if (event.data && event.data.type) {
+        console.log('TrenkoChrome: Received message from TrenkoWeb:', event.data);
+
+        setTrenkoSessionStatus(event.data.type.trim());
+    }
+}
+
+function setTrenkoSessionStatus(statusString) {
+    if (currentTrenkoSessionStatus === statusString) {
+        return; // Do nothing if the status hasn't changed
+    }
+
+    currentTrenkoSessionStatus = statusString;
+
+    // Persist session status in Chrome storage
+    chrome.storage.sync.set({ 'trenkoSessionStatus': currentTrenkoSessionStatus }, function () {
+        console.log('TrenkoChrome: Session status saved as', currentTrenkoSessionStatus);
+    });
+
+    // Update the button visibility based on the new status
+    showHideButtonsBasedOnStatus();
+}
+
+function showHideButtonsBasedOnStatus() {
+    const allButtonIds = [
+        'checkInButton',
+        'addToAgendaButton',
+        'postAgendaButton',
+        'clockEffortButton',
+        'addBreakButton',
+        'checkOutButton',
+        'cardReportButton'
+    ];
+
+    let visibleButtonIds = [];
+
+    switch (currentTrenkoSessionStatus) {
+        case 'checked_out':
+            visibleButtonIds = ['checkInButton', 'cardReportButton'];
+            break;
+        case 'checked_in':
+            visibleButtonIds = ['addToAgendaButton', 'postAgendaButton', 'cardReportButton'];
+            break;
+        case 'agenda_posted':
+            visibleButtonIds = ['clockEffortButton', 'addBreakButton', 'checkOutButton', 'cardReportButton'];
+            break;
+        default:
+            // Handle any unexpected status by showing only the Card Report button
+            visibleButtonIds = ['cardReportButton'];
+            break;
+    }
+
+    // Iterate and set visibility for each button
+    allButtonIds.forEach(function(buttonId) {
+        const buttonElement = document.getElementById(buttonId);
+        if (buttonElement) {
+            if (visibleButtonIds.includes(buttonId)) {
+                buttonElement.style.display = 'block';
+            } else {
+                buttonElement.style.display = 'none';
+            }
+        }
+    });
 }
 
 // ------------------------------------------------------------------
 
 
 // Developer notes:
-// window location change event?? or implement mutation observer to detect card open??
-// a function to wait for buttons container to load??
+// use mutation observer??
