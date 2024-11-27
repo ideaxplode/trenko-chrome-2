@@ -150,7 +150,7 @@ function buildCustomElementsTree(buttonsContainer) {
                 </li>
                 <li id="addToAgendaElement" class="${liClass}" style="display: none;">
                     <button class="${buttonClass} add-to-agenda-button" type="button">
-                        ➕&nbsp; ⨭&nbsp; Add to Agenda
+                        ➕&nbsp; Add to Agenda
                     </button>
                 </li>
                 <li id="postAgendaElement" class="${liClass}" style="display: none;">
