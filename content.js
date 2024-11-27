@@ -16,17 +16,8 @@ function initializeTrenkoChrome() {
     loadTrenkoWebInfo(); // this is an async call
     loadTrenkoSessionStatus();  // this also is an async call
 
-    // Initial check
-    if (isCardView(window.location.href)) {
-        handleCardView();
-    }
-
-    // Start monitoring URL changes
-    monitorUrlChanges((newUrl) => {
-        if (isCardView(newUrl)) {
-            handleCardView();
-        }
-    });
+    // Set up MutationObserver to detect card view
+    observeCardView();
 }
 
 function loadTrenkoWebInfo() {
@@ -53,29 +44,52 @@ function loadTrenkoSessionStatus() {
     });
 }
 
-// Function to monitor URL changes
-function monitorUrlChanges(callback) {
-    let currentUrl = window.location.href;
+function observeCardView() {
+    const targetNode = document.body;
+    const observerOptions = {
+        childList: true,
+        subtree: true,
+    };
 
-    setInterval(() => {
-        if (currentUrl !== window.location.href) {
-            currentUrl = window.location.href;
-            callback(currentUrl);
-        }
-    }, 500); // Check every 500ms
+    let cardOpen = false; // Flag to prevent multiple triggers
+
+    const observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+            // Check for added nodes
+            mutation.addedNodes.forEach(function (node) {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (isCardView(node) && !cardOpen) {
+                        console.log('TrenkoChrome: Trello card view opened.');
+                        cardOpen = true;
+                        handleCardView();
+                    }
+                }
+            });
+
+            // Check for removed nodes
+            mutation.removedNodes.forEach(function (node) {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (isCardView(node) && cardOpen) {
+                        console.log('TrenkoChrome: Trello card view closed.');
+                        cardOpen = false;
+                    }
+                }
+            });
+        });
+    });
+
+    observer.observe(targetNode, observerOptions);
 }
 
-// Function to determine if the current URL corresponds to a Trello card view
-function isCardView(url) {
-    // Trello card URLs typically follow the pattern: https://trello.com/c/{cardID}/{card-title}
-    const cardUrlPattern = /^https:\/\/trello\.com\/c\/[^/]+\/.+/;
-    return cardUrlPattern.test(url);
+function isCardView(node) {
+    if (node.querySelector && node.querySelector('button[data-testid="card-back-labels-button"]')) {
+        return true;
+    }
+    return false;
 }
 
 // Function to handle actions when a card-open is detected
 function handleCardView() {
-    console.log('TrenkoChrome: Trello card view detected.');
-
     if (!isTrenkoWebInfoLoaded()) {
         return; // exit by doing nothing
     }
@@ -94,18 +108,14 @@ function isTrenkoWebInfoLoaded() {
 
 // Function to add custom buttons to the Trello card
 function addCustomButtonsToCard() {
-    let buttonsContainer = null;
+    let buttonsContainer = getButtonsContainer();
 
-    setTimeout(function () {
-        buttonsContainer = getButtonsContainer();
-
-        if (buttonsContainer) {
-            var customElementsTree = buildCustomElementsTree(buttonsContainer);
-            insertCustomElements(buttonsContainer, customElementsTree);
-            addEventListenersToButtons();
-            showHideButtonsBasedOnStatus();
-        }
-    }, 2000);
+    if (buttonsContainer) {
+        var customElementsTree = buildCustomElementsTree(buttonsContainer);
+        insertCustomElements(buttonsContainer, customElementsTree);
+        addEventListenersToButtons();
+        showHideButtonsBasedOnStatus();
+    }
 }
 
 function getButtonsContainer() {
@@ -272,7 +282,7 @@ function handleTrenkoButtonClick() {
             break;
         case 'cardReportElement':
             cardId = getCurrentTrelloCardId();
-            url = `${trenkoHostUrl}/reports/card_efforts?card_id=${cardId}&token=${trenkoApiKey}`;
+            url = `${trenkoHostUrl}/user/reports/card_efforts?card_id=${cardId}&token=${trenkoApiKey}`;
             break;
         default:
             console.log('TrenkoChrome: Unknown button clicked;');
